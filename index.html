@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoinzoX | VIP MASTER ADMIN v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body { background-color: #020617; color: white; font-family: 'Poppins', sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
+        .status-pending { color: #fbbf24; background: rgba(251, 191, 36, 0.1); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+        input { background: #0f172a; border: 1px solid #1e293b; color: white; padding: 10px; border-radius: 10px; outline: none; width: 100%; }
+        button { transition: 0.3s; cursor: pointer; }
+        button:active { transform: scale(0.95); }
+        tr { border-bottom: 1px solid rgba(255,255,255,0.02); }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+    <div class="flex justify-between items-center mb-10">
+        <div>
+            <h1 class="text-3xl font-bold text-sky-500">CoinzoX Master Admin</h1>
+            <p class="text-gray-400 text-sm">Real-time Order & User Control</p>
+        </div>
+        <div class="bg-green-500/10 px-4 py-2 rounded-xl border border-green-500/20">
+            <span class="text-green-500 font-bold">● SYSTEM LIVE</span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <div class="lg:col-span-2 space-y-6">
+            <div class="glass p-6 rounded-3xl border-l-4 border-yellow-500">
+                <h2 class="text-xl font-bold mb-6 flex items-center gap-2 text-yellow-500">
+                    <span>⏳</span> Live Pending Orders
+                </h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="text-gray-500 text-xs uppercase">
+                                <th class="pb-4">User</th>
+                                <th class="pb-4">Order Amount</th>
+                                <th class="pb-4">Status</th>
+                                <th class="pb-4 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orderTable">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="glass p-6 rounded-3xl">
+                <h2 class="text-xl font-bold mb-6 flex items-center gap-2 text-sky-400">
+                    <span>👥</span> All Members
+                </h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="text-gray-500 text-xs uppercase">
+                                <th class="pb-4">Name/Phone</th>
+                                <th class="pb-4">INR Balance</th>
+                                <th class="pb-4">USDT Assets</th>
+                                <th class="pb-4 text-right">Quick Edit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTable">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            <div class="glass p-8 rounded-3xl border border-sky-500/30">
+                <h3 class="text-lg font-bold mb-6 text-sky-400">Edit User Account</h3>
+                <div class="space-y-5">
+                    <div>
+                        <label class="text-xs text-gray-400 uppercase ml-1">Selected Phone</label>
+                        <input type="text" id="targetPhone" placeholder="Select a user first">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400 uppercase ml-1">New INR Balance</label>
+                        <input type="number" id="newBalance" placeholder="Enter INR Amount">
+                    </div>
+                    <button onclick="updateBalance()" class="w-full bg-sky-600 py-3 rounded-xl font-bold hover:bg-sky-500">Update INR Balance</button>
+                    
+                    <div class="pt-4 border-t border-white/5">
+                        <label class="text-xs text-gray-400 uppercase ml-1">Update USDT Assets</label>
+                        <input type="number" id="newUsdt" placeholder="Enter USDT Amount" class="mb-3 mt-1">
+                        <button onclick="updateUsdtOnly()" class="w-full bg-orange-600 py-3 rounded-xl font-bold hover:bg-orange-500">Update USDT Assets</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass p-6 rounded-3xl text-sm text-gray-400 italic">
+                <p>Note: "Approve" button par click karne se user ka status <b>Success</b> hoga aur uske balance mein USDT automatic add ho jayenge.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCRocodkDhKanc-9hTI2xpzfihlh29udio",
+            authDomain: "trusted-usdt-seller.firebaseapp.com",
+            projectId: "trusted-usdt-seller",
+            storageBucket: "trusted-usdt-seller.firebasestorage.app",
+            messagingSenderId: "667426874776",
+            appId: "1:667426874776:web:2c058a8b06a985e390b7ed"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        function loadData() {
+            // Real-time listener for both tables
+            db.collection("users").onSnapshot(snapshot => {
+                const uTable = document.getElementById('userTable');
+                const oTable = document.getElementById('orderTable');
+                uTable.innerHTML = "";
+                oTable.innerHTML = "";
+
+                snapshot.forEach(doc => {
+                    const user = doc.data();
+                    const phone = doc.id;
+
+                    // User List Table
+                    uTable.innerHTML += `
+                        <tr class="text-sm">
+                            <td class="py-4">
+                                <p class="font-bold">${user.fullName || 'User'}</p>
+                                <p class="text-[10px] text-gray-500">${phone}</p>
+                            </td>
+                            <td>₹${(user.balance || 0).toLocaleString()}</td>
+                            <td class="text-sky-400 font-bold">${(user.usdt || 0)} USDT</td>
+                            <td class="text-right">
+                                <button onclick="selectUser('${phone}', ${user.balance}, ${user.usdt})" class="bg-white/5 px-3 py-1 rounded-md text-xs border border-white/10">Edit</button>
+                            </td>
+                        </tr>
+                    `;
+
+                    // Order Table (Processing filter)
+                    if(user.history) {
+                        user.history.forEach((order, index) => {
+                            if(order.status === "Processing") {
+                                oTable.innerHTML += `
+                                    <tr class="text-sm border-b border-white/5">
+                                        <td class="py-4">
+                                            <p class="font-bold">${user.fullName || 'User'}</p>
+                                            <p class="text-[10px] text-gray-500">${phone}</p>
+                                        </td>
+                                        <td>
+                                            <p class="font-bold text-yellow-500">${order.amt} ${order.coin || 'USDT'}</p>
+                                            <p class="text-[10px] text-gray-500">${order.date}</p>
+                                        </td>
+                                        <td><span class="status-pending">PENDING</span></td>
+                                        <td class="text-right">
+                                            <button onclick="approveOrder('${phone}', ${index})" class="bg-green-600 px-4 py-1 rounded-lg text-xs font-bold shadow-lg shadow-green-500/20">APPROVE</button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }
+                        });
+                    }
+                });
+            });
+        }
+
+        async function approveOrder(phone, orderIndex) {
+            if(!confirm("Order Success mark karein? User ka USDT balance bhi update ho jayega.")) return;
+            
+            try {
+                const userRef = db.collection("users").doc(phone);
+                const doc = await userRef.get();
+                const data = doc.data();
+                
+                // Pure history array ko copy karke update karna
+                let updatedHistory = [...data.history];
+                const orderAmt = updatedHistory[orderIndex].amt;
+                
+                // Status fix: "Processing" se "Success"
+                updatedHistory[orderIndex].status = "Success";
+
+                await userRef.update({
+                    history: updatedHistory,
+                    usdt: (data.usdt || 0) + orderAmt
+                });
+                
+                alert("Order Approved! Dashboard update ho gaya.");
+            } catch (e) {
+                alert("Error: " + e.message);
+            }
+        }
+
+        async function updateBalance() {
+            const p = document.getElementById('targetPhone').value;
+            const b = parseFloat(document.getElementById('newBalance').value);
+            if(!p || isNaN(b)) return alert("User select karein!");
+            await db.collection("users").doc(p).update({ balance: b });
+            alert("INR Balance Updated!");
+        }
+
+        async function updateUsdtOnly() {
+            const p = document.getElementById('targetPhone').value;
+            const u = parseFloat(document.getElementById('newUsdt').value);
+            if(!p || isNaN(u)) return alert("User aur Amount check karein!");
+            await db.collection("users").doc(p).update({ usdt: u });
+            alert("USDT Assets Updated!");
+        }
+
+        function selectUser(phone, balance, usdt) {
+            document.getElementById('targetPhone').value = phone;
+            document.getElementById('newBalance').value = balance;
+            document.getElementById('newUsdt').value = usdt;
+        }
+
+        window.onload = loadData;
+    </script>
+</body>
+</html>
