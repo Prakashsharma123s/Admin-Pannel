@@ -226,7 +226,7 @@
 
                         oTable.innerHTML += `
                         <div class="glass p-4 rounded-2xl border border-yellow-500/20">
-                            <p class="font-bold">${user.fullName || 'User'}</p>
+                            <p class="font-bold"><p class="font-bold">${user.name || user.fullName || 'User'}</p></p>
                             <p class="text-xs text-gray-500">${phone}</p>
 
                             <p class="mt-2 text-yellow-500 font-bold">
