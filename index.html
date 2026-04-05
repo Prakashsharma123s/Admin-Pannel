@@ -28,6 +28,52 @@
             <p class="text-gray-400 text-sm">Real-time Order & User Control</p>
         </div>
 </div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+
+    <div class="glass p-4 rounded-2xl">
+        <p class="text-xs text-gray-400">Total Users</p>
+        <h2 id="totalUsers" class="text-2xl font-bold">0</h2>
+    </div>
+
+    <div class="glass p-4 rounded-2xl">
+        <p class="text-xs text-gray-400">Total Balance</p>
+        <h2 id="totalBalance" class="text-2xl font-bold">₹0</h2>
+    </div>
+
+    <div class="glass p-4 rounded-2xl">
+        <p class="text-xs text-gray-400">Total USDT</p>
+        <h2 id="totalUsdt" class="text-2xl font-bold">0</h2>
+    </div>
+
+    <div class="glass p-4 rounded-2xl">
+        <p class="text-xs text-gray-400">Pending Orders</p>
+        <h2 id="pendingOrders" class="text-2xl font-bold text-yellow-400">0</h2>
+    </div>
+
+</div> 
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+
+    <div class="glass p-4 rounded-2xl">
+        <p class="text-xs text-gray-400">Total Users</p>
+        <h2 id="totalUsers" class="text-2xl font-bold">0</h2>
+    </div>
+
+    <div class="glass p-4 rounded-2xl">
+        <p class="text-xs text-gray-400">Total Balance</p>
+        <h2 id="totalBalance" class="text-2xl font-bold">₹0</h2>
+    </div>
+
+    <div class="glass p-4 rounded-2xl">
+        <p class="text-xs text-gray-400">Total USDT</p>
+        <h2 id="totalUsdt" class="text-2xl font-bold">0</h2>
+    </div>
+
+    <div class="glass p-4 rounded-2xl">
+        <p class="text-xs text-gray-400">Pending Orders</p>
+        <h2 id="pendingOrders" class="text-2xl font-bold text-yellow-400">0</h2>
+    </div>
+
+</div>
        
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -54,11 +100,10 @@
             </div>
 
             <div class="glass p-6 rounded-3xl">
-                <h2 class="text-xl font-bold mb-6 flex items-center gap-2 text-sky-400">
-                    <span>👥</span> All Members
-                </h2>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left">
+    <h2 class="text-xl font-bold mb-4 text-sky-400">👥 All Users</h2>
+
+    <div id="userTable" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+</div>
                         <thead>
                             <tr class="text-gray-500 text-xs uppercase">
                                 <th class="pb-4">Name/Phone</th>
@@ -135,58 +180,83 @@
         const db = firebase.firestore();
 
         function loadData() {
-            // Real-time listener for both tables
-            db.collection("users").onSnapshot(snapshot => {
-                const uTable = document.getElementById('userTable');
-                const oTable = document.getElementById('orderTable');
-                uTable.innerHTML = "";
-                oTable.innerHTML = "";
+    db.collection("users").onSnapshot(snapshot => {
 
-                snapshot.forEach(doc => {
-                    const user = doc.data();
-                    const phone = doc.id;
+        const uTable = document.getElementById('userTable');
+        const oTable = document.getElementById('orderTable');
 
-                    // User List Table
-                    uTable.innerHTML += `
-                        <tr class="text-sm">
-                            <td class="py-4">
-                                <p class="font-bold">${user.fullName || 'User'}</p>
-                                <p class="text-[10px] text-gray-500">${phone}</p>
-                            </td>
-                            <td>₹${(user.balance || 0).toLocaleString()}</td>
-                            <td class="text-sky-400 font-bold">${(user.usdt || 0)} USDT</td>
-                            <td class="text-right">
-                                <button onclick="selectUser('${phone}', ${user.balance}, ${user.usdt})" class="bg-white/5 px-3 py-1 rounded-md text-xs border border-white/10">Edit</button>
-                            </td>
-                        </tr>
-                    `;
+        uTable.innerHTML = "";
+        oTable.innerHTML = "";
 
-                    // Order Table (Processing filter)
-                    if(user.history) {
-                        user.history.forEach((order, index) => {
-                            if(order.status === "Processing") {
-                                oTable.innerHTML += `
-                                    <tr class="text-sm border-b border-white/5">
-                                        <td class="py-4">
-                                            <p class="font-bold">${user.fullName || 'User'}</p>
-                                            <p class="text-[10px] text-gray-500">${phone}</p>
-                                        </td>
-                                        <td>
-                                            <p class="font-bold text-yellow-500">${order.amt} ${order.coin || 'USDT'}</p>
-                                            <p class="text-[10px] text-gray-500">${order.date}</p>
-                                        </td>
-                                        <td><span class="status-pending">PENDING</span></td>
-                                        <td class="text-right">
-                                            <button onclick="approveOrder('${phone}', ${index})" class="bg-green-600 px-4 py-1 rounded-lg text-xs font-bold shadow-lg shadow-green-500/20">APPROVE</button>
-                                        </td>
-                                    </tr>
-                                `;
-                            }
-                        });
+        let totalUsers = 0;
+        let totalBalance = 0;
+        let totalUsdt = 0;
+        let pendingOrders = 0;
+
+        snapshot.forEach(doc => {
+            const user = doc.data();
+            const phone = doc.id;
+
+            totalUsers++;
+            totalBalance += user.balance || 0;
+            totalUsdt += user.usdt || 0;
+
+            // 🔥 USER CARD
+            uTable.innerHTML += `
+            <div class="glass p-4 rounded-2xl hover:scale-105 transition">
+                <p class="font-bold text-lg">${user.name || user.fullName || 'User'}</p>
+                <p class="text-xs text-gray-500">${phone}</p>
+
+                <p class="mt-2 text-sm">💰 ₹${(user.balance || 0).toLocaleString()}</p>
+                <p class="text-sky-400 font-bold">${(user.usdt || 0)} USDT</p>
+
+                <button onclick="selectUser('${phone}', ${user.balance}, ${user.usdt})"
+                    class="mt-3 w-full bg-white/5 py-2 rounded-lg text-xs">
+                    Edit
+                </button>
+            </div>
+            `;
+
+            // 🔥 ORDERS
+            if(user.history) {
+                user.history.forEach((order, index) => {
+                    if(order.status === "Processing") {
+
+                        pendingOrders++;
+
+                        oTable.innerHTML += `
+                        <div class="glass p-4 rounded-2xl border border-yellow-500/20">
+                            <p class="font-bold">${user.fullName || 'User'}</p>
+                            <p class="text-xs text-gray-500">${phone}</p>
+
+                            <p class="mt-2 text-yellow-500 font-bold">
+                                ${order.amt} ${order.coin || 'USDT'}
+                            </p>
+
+                            <p class="text-xs text-gray-500">${order.date}</p>
+
+                            <span class="status-pending inline-block mt-2">PENDING</span>
+
+                            <button onclick="approveOrder('${phone}', ${index})"
+                                class="mt-3 w-full bg-green-600 py-2 rounded-lg text-xs font-bold">
+                                APPROVE
+                            </button>
+                        </div>
+                        `;
                     }
                 });
-            });
-        }
+            }
+
+        });
+
+        // 🔥 UPDATE STATS
+        document.getElementById("totalUsers").innerText = totalUsers;
+        document.getElementById("totalBalance").innerText = "₹" + totalBalance.toLocaleString();
+        document.getElementById("totalUsdt").innerText = totalUsdt;
+        document.getElementById("pendingOrders").innerText = pendingOrders;
+
+    });
+}
 
         async function approveOrder(phone, orderIndex) {
             if(!confirm("Order Success mark karein? User ka USDT balance bhi update ho jayega.")) return;
