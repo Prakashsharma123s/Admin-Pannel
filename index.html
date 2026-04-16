@@ -41,7 +41,6 @@
     </div>
 
     <div class="glass p-4 rounded-2xl">
-        <p class="text-xs text-gray-400">Total USDT</p>
         <h2 id="totalUsdt" class="text-2xl font-bold">0</h2>
     </div>
 
@@ -54,7 +53,6 @@
 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
 
     <div class="glass p-4 rounded-2xl">
-        <p class="text-xs text-gray-400">Total Users</p>
         <h2 id="totalUsers" class="text-2xl font-bold">0</h2>
     </div>
 
@@ -81,8 +79,15 @@
         <div class="lg:col-span-2 space-y-6">
             <div class="glass p-6 rounded-3xl border-l-4 border-yellow-500">
                 <h2 class="text-xl font-bold mb-6 flex items-center gap-2 text-yellow-500">
-                    <span>⏳</span> Live Pending Orders
-                </h2>
+    <span>⏳</span> Live Pending Orders
+</h2>
+
+<!-- ✅ YAHAN ALAG SE -->
+<h2 class="text-xl font-bold mt-6 mb-4 text-green-400">
+    💰 Deposit Requests
+</h2>
+
+<div id="depositTable" class="space-y-3"></div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left">
                         <thead>
@@ -308,6 +313,42 @@
 
         window.onload = loadData;
 
+db.collection("payments").onSnapshot(snapshot => {
+
+    const oTable = document.getElementById('depositTable');
+    oTable.innerHTML = "";   // ✅ YAHAN HONA CHAHIYE (forEach ke bahar)
+
+    snapshot.forEach(doc => {
+
+        const data = doc.data();
+
+        if(data.status === "Pending") {
+
+            oTable.innerHTML += `
+            <div class="glass p-4 rounded-2xl border border-yellow-500/20">
+
+                <p class="font-bold">${data.phone}</p>
+
+                <p class="mt-2 text-green-400 font-bold">
+                    ₹${data.amount}
+                </p>
+
+                <p class="text-xs text-gray-400">
+                    UTR: ${data.utr}
+                </p>
+
+                <span class="status-pending inline-block mt-2">PENDING</span>
+
+                <button onclick="approvePayment('${doc.id}', '${data.phone}', ${data.amount})"
+                    class="mt-3 w-full bg-green-600 py-2 rounded-lg text-xs font-bold">
+                    APPROVE
+                </button>
+            </div>
+            `;
+        }
+    });
+
+});
 async function updateQR() {
     const link = document.getElementById("qrLink").value;
 
@@ -335,6 +376,27 @@ async function updateRate() {
     });
 
     alert("Rate Updated ✅");
+}
+async function approvePayment(id, phone, amount) {
+
+    if(!confirm("Approve karna hai? INR add hoga")) return;
+
+    try {
+        // 1. Payment status update
+        await db.collection("payments").doc(id).update({
+            status: "Approved"
+        });
+
+        // 2. User balance update
+        await db.collection("users").doc(phone).set({
+            balance: firebase.firestore.FieldValue.increment(amount)
+        }, { merge: true });
+
+        alert("Approved ✅ INR Added");
+
+    } catch (e) {
+        alert("Error: " + e.message);
+    }
 }
 
     </script>
