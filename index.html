@@ -57,7 +57,6 @@
     </div>
 
     <div class="glass p-4 rounded-2xl">
-        <p class="text-xs text-gray-400">Total Balance</p>
         <h2 id="totalBalance" class="text-2xl font-bold">₹0</h2>
     </div>
 
@@ -109,17 +108,7 @@
 
     <div id="userTable" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
 </div>
-                        <thead>
-                            <tr class="text-gray-500 text-xs uppercase">
-                                <th class="pb-4">Name/Phone</th>
-                                <th class="pb-4">INR Balance</th>
-                                <th class="pb-4">USDT Assets</th>
-                                <th class="pb-4 text-right">Quick Edit</th>
-                            </tr>
-                        </thead>
-                        <tbody id="userTable">
-                            </tbody>
-                    </table>
+                        
                 </div>
             </div>
         </div>
@@ -387,10 +376,25 @@ async function approvePayment(id, phone, amount) {
             status: "Approved"
         });
 
-        // 2. User balance update
-        await db.collection("users").doc(phone).set({
-            balance: firebase.firestore.FieldValue.increment(amount)
-        }, { merge: true });
+        const userRef = db.collection("users").doc(phone);
+        const doc = await userRef.get();
+        const data = doc.data();
+
+        let updatedHistory = [...data.history];
+
+        // 🔥 LAST ENTRY (deposit) ko success karo
+        for(let i = updatedHistory.length - 1; i >= 0; i--) {
+            if(updatedHistory[i].type === "deposit" && updatedHistory[i].status === "Pending") {
+                updatedHistory[i].status = "Success";
+                break;
+            }
+        }
+
+        // 2. balance + history update
+        await userRef.update({
+            balance: (data.balance || 0) + amount,
+            history: updatedHistory
+        });
 
         alert("Approved ✅ INR Added");
 
